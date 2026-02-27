@@ -1,68 +1,81 @@
 # Issues Found During Testing
 
-## Critical: Information Leakage in Status Endpoint
+## Bug 1 (Critical, FIXED): Security Headers Missing on Static Pages
 
-**Severity:** High (Information Disclosure / Enumeration Vulnerability)
+**Severity:** High
 
-**Location:** `src/secret-do.ts` `handleStatus()` method (lines 81-96)
+**Root Cause:** The `[assets]` binding in wrangler.toml serves static files directly from Cloudflare's CDN, **bypassing the Worker entirely**. The security headers middleware in `src/middleware/security-headers.ts` only runs for requests that reach the Worker.
 
-**Issue:**
-The `/api/secrets/:id/status` endpoint returns different response shapes based on the secret's state, allowing attackers to enumerate secrets and determine their status:
+**Affected pages (before fix):**
+- `/` (index.html) — create secret page
+- `/login` (login.html) — OAuth login page
+- `/dashboard` (dashboard.html) — user dashboard
+- `/style.css`, `/crypto.js`, `/shared.js`, etc. — all static assets
 
-1. **Non-existent/fully-cleaned-up secret** → `{"status":"unknown"}`
-2. **Pending secret** → `{"status":"pending","createdAt":"...","expiresAt":"...","viewedAt":null}`
-3. **Viewed secret** → `{"status":"viewed","createdAt":"...","expiresAt":"...","viewedAt":"...","viewerCountry":"..."}`
-4. **Expired secret** → `{"status":"expired","createdAt":"...","expiresAt":"...","viewedAt":null}`
+**NOT affected** (handled by Worker):
+- `/api/*` — all API routes
+- `/s/:id` — reveal page (SPA route, Worker proxies to ASSETS)
+- `/status/:id` — status page (SPA route, Worker proxies to ASSETS)
 
-**Attack Scenario:**
-An attacker can brute-force or enumerate secret IDs and determine:
-- Whether a secret was created
-- If it has been viewed
-- Exact timing of when it was viewed
-- Geographic location of the viewer (country code)
+**Impact:** All static pages served without CSP, HSTS, X-Frame-Options, Referrer-Policy. XSS protections absent on the main create-secret page.
 
-This violates the anti-enumeration requirement stated in CLAUDE.md: "Anti-enumeration: Status endpoint always returns 200 with `'unknown'` for non-existent/cleaned-up secrets"
-
-**Fix:**
-Modify `handleStatus()` to always return `{"status":"unknown"}` regardless of whether the secret exists or what state it's in:
-
-```typescript
-private async handleStatus(): Promise<Response> {
-  // Always return uniform response to prevent enumeration
-  return Response.json({ status: 'unknown' });
-}
-```
-
-**Trade-off:** Users will no longer be able to check if their secret was viewed via the status page. The status link would only show "Status unavailable." Consider alternative approaches:
-- Store viewer metadata in KV keyed by creatorUserId (only for authenticated users)
-- Require authentication to view status (limits to secret creator only)
-- Return a pre-shared secret/token in the status link that must be provided to see metadata
+**Fix:** Added `frontend/_headers` file. Cloudflare Assets supports `_headers` files (like Pages) to apply response headers at the CDN level, before caching.
 
 ---
 
-## Testing Results
+## Bug 2 (Medium, FIXED): passwordProtected=true Accepted Without Salt
 
-✅ **Passed:**
-- Health endpoint working
-- Secret creation (POST /api/secrets) — 201 response
-- Secret retrieval and atomic burn — returns plaintext + burns on second access
-- Password protection — salt stored and returned correctly
-- CSRF protection — rejects requests from different origins
-- Frontend loads correctly
-- Auth endpoints (`/api/auth/me`) working
-- Input validation — rejects invalid secret IDs and oversized payloads
+**Severity:** Medium (data integrity)
 
-⚠️ **Needs Investigation:**
-- Frontend reveal page decryption (not tested interactively)
-- Google OAuth flow (no credentials configured)
-- User dashboard with live DO checks (requires auth)
-- Alarm-based TTL expiry (time-dependent, hard to test)
+**Location:** `src/routes/secrets.ts` POST `/api/secrets`
+
+**Issue:** The server accepted `{ passwordProtected: true }` without a `salt` field. This stored a permanently undecryptable secret — the reveal page would prompt for a password, but `decryptWithPassword()` would fail because `salt` was undefined.
+
+**Fix:** Added validation requiring `salt` when `passwordProtected` is true. Returns 400: "Password-protected secrets require a salt."
 
 ---
 
-## Recommendations
+## Previously Reported: Status Endpoint "Enumeration Vulnerability" — FALSE POSITIVE
 
-1. **Fix the status endpoint immediately** — this is an enumeration vulnerability
-2. Consider rate limiting on the status endpoint to prevent brute-force enumeration
-3. Test the 30-day TTL metadata cleanup alarm to ensure it triggers correctly
-4. Load-test the application with many concurrent secrets and viewers
+The prior analysis claimed the status endpoint (`/api/secrets/:id/status`) was a critical enumeration vulnerability because it returns different responses for pending/viewed/expired vs. unknown secrets. **This is NOT a real issue:**
+
+1. **128-bit entropy IDs:** Secret IDs are 16 random bytes (base64url, 22 chars). Brute-forcing 2^128 possibilities is infeasible — comparable to UUID v4.
+
+2. **Intentional design:** The status page is a feature for secret creators. When you create a secret, you get a status link (`/status/:id`). The entire purpose is to show whether the secret has been viewed, when, and from where.
+
+3. **CLAUDE.md is correctly implemented:** The doc says "Anti-enumeration: Status endpoint always returns 200 with `'unknown'` for non-existent/cleaned-up secrets." This IS how it works — non-existent secrets return `{"status":"unknown"}`. After the 30-day metadata cleanup alarm fires, viewed/expired secrets also return `{"status":"unknown"}`, becoming indistinguishable from never-existed.
+
+4. **The suggested fix would have broken the feature:** Always returning `{"status":"unknown"}` would make the status page completely useless — creators could never check if their secret was viewed.
+
+---
+
+## Full Test Results (20 tests)
+
+### Passed (18/20):
+- Health endpoint returns 200
+- Secret creation returns 201
+- Atomic burn works (second retrieve returns 404)
+- ID collision returns 409
+- Password-protected secret stores and retrieves with salt
+- CSRF blocks POST without Origin header
+- CSRF blocks POST from wrong Origin
+- 30-day TTL rejects unauthenticated users (403)
+- Invalid TTL values rejected (400)
+- Negative/zero TTL rejected (400)
+- Oversized payload rejected (400)
+- Empty encrypted payload rejected (400)
+- Malicious ID format rejected (404)
+- SPA route `/s/:id` serves reveal.html with security headers
+- Non-existent secret status returns `{"status":"unknown"}`
+- Created secret status returns `pending` with metadata
+- Viewed secret status returns `viewed` with viewedAt
+- Logout CSRF enforced (rejects without Origin)
+
+### Issues Found (2/20):
+- **Security headers missing on static pages** — FIXED via `_headers` file
+- **passwordProtected=true without salt accepted** — FIXED via server validation
+
+### Minor Observations:
+- TTL as string `"3600"` accepted (JS object key coercion) — harmless, TTL value is correct
+- `passwordProtected: false` with `salt` provided stores the salt unnecessarily — harmless
+- CORS reflects any origin in `Access-Control-Allow-Origin` but does NOT set `Access-Control-Allow-Credentials`, so cross-origin credentialed requests are blocked by browsers — not exploitable

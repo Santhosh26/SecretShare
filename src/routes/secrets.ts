@@ -42,6 +42,11 @@ secrets.post('/api/secrets', optionalAuth, async (c) => {
     return c.json({ error: 'Invalid salt' }, 400);
   }
 
+  // Password-protected secrets must include a salt
+  if (body.passwordProtected && !body.salt) {
+    return c.json({ error: 'Password-protected secrets require a salt' }, 400);
+  }
+
   // Validate TTL
   const ttlSeconds = ALLOWED_TTLS[body.ttl];
   if (!ttlSeconds) {
