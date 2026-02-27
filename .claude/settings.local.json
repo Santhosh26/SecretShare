@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(git:*)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 15 npx wrangler:*)",
+      "Bash(taskkill:*)",
+      "Bash(__NEW_LINE_f6674f5655aca089__ echo:*)",
+      "Bash(npm run:*)",
+      "Bash(npx wrangler:*)"
+    ]
+  }
+}

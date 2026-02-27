@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecretShare — Reveal Secret</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128274;</text></svg>">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <div class="container">
+    <header class="header">
+      <div class="header__logo">
+        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <h1 class="header__title">Secret<span>Share</span></h1>
+      </div>
+      <p class="header__subtitle">Someone shared a secret with you</p>
+    </header>
+
+    <nav class="nav" aria-label="User navigation">
+      <a href="/login" class="nav__link">Sign in</a>
+    </nav>
+
+    <main id="main">
+      <!-- Pre-reveal state -->
+      <div id="pre-reveal" class="card">
+        <div class="message message--info">
+          This secret can only be viewed once. After you reveal it, the encrypted data is permanently destroyed.
+        </div>
+
+        <!-- Password input (hidden by default) -->
+        <div id="password-section" class="form-group" style="display:none; margin-top:20px;">
+          <label for="reveal-password">This secret is password-protected</label>
+          <input type="password" id="reveal-password" placeholder="Enter the password" autocomplete="off">
+        </div>
+
+        <button id="reveal-btn" class="btn btn--primary" style="margin-top:20px">
+          Reveal Secret
+        </button>
+
+        <div id="reveal-loading" class="loading" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Decrypting...</span>
+        </div>
+      </div>
+
+      <!-- Error state -->
+      <div id="error-state" style="display:none">
+        <div class="card">
+          <div id="error-message" class="message message--error"></div>
+          <a href="/" class="btn btn--secondary" style="margin-top:16px">Create a New Secret</a>
+        </div>
+      </div>
+
+      <!-- Revealed state -->
+      <div id="revealed-state" style="display:none">
+        <div class="card">
+          <div class="form-group">
+            <label>Your secret</label>
+            <div id="secret-content" class="secret-display" role="region" aria-label="Revealed secret" tabindex="0"></div>
+          </div>
+          <button id="copy-secret-btn" class="btn btn--secondary" style="margin-top:16px">
+            Copy to Clipboard
+          </button>
+          <div class="destroyed-notice" role="alert">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            This secret has been permanently destroyed. You cannot view it again.
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <a href="/">Create your own secret</a> &middot; End-to-end encrypted
+    </footer>
+  </div>
+
+  <script src="/crypto.js"></script>
+  <script src="/shared.js"></script>
+  <script src="/reveal.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+name = "secret-share"
+main = "src/index.ts"
+compatibility_date = "2025-02-24"
+
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+
+[durable_objects]
+bindings = [
+  { name = "SECRET_DO", class_name = "SecretDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SecretDurableObject"]
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "0ad8997bf5804fafb3b6d2933ed9a284"
+
+[[kv_namespaces]]
+binding = "USERS"
+id = "faf56bb38e1748eb90144e92a6356b1e"
+
+[vars]
+GOOGLE_CLIENT_ID = ""
+GOOGLE_REDIRECT_URI = ""
