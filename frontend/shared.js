@@ -25,6 +25,7 @@ function renderNav(user) {
     nav.innerHTML = `
       <span class="nav__user">${escapeHtml(user.name)}</span>
       <a href="/dashboard" class="nav__link">Dashboard</a>
+      <a href="/faq" class="nav__link">FAQ</a>
       <a href="#" class="nav__link" id="logout-link">Sign out</a>
     `;
     const logoutLink = document.getElementById('logout-link');
@@ -40,6 +41,7 @@ function renderNav(user) {
     }
   } else {
     nav.innerHTML = `
+      <a href="/faq" class="nav__link">FAQ</a>
       <a href="/login" class="nav__link">Sign in</a>
     `;
   }

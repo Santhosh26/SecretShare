@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecretShare — FAQ</title>
+  <meta name="description" content="Frequently asked questions about SecretShare's end-to-end encryption, zero-knowledge design, and security guarantees.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128274;</text></svg>">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <div class="container">
+    <header class="header">
+      <div class="header__logo">
+        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <h1 class="header__title">Secret<span>Share</span></h1>
+      </div>
+      <p class="header__subtitle">Frequently Asked Questions</p>
+    </header>
+
+    <nav class="nav" aria-label="User navigation">
+      <a href="/login" class="nav__link">Sign in</a>
+    </nav>
+
+    <main id="main">
+      <div class="card">
+        <h2>How does SecretShare work?</h2>
+        <p>
+          SecretShare lets you share sensitive information through one-time, self-destructing links.
+          The flow is simple: you paste your secret, we encrypt it in your browser, and you get a
+          unique link. Send that link to your recipient — when they open it, the secret is decrypted
+          in their browser and permanently deleted from our servers. No one can view it again, not
+          even you.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What encryption does SecretShare use?</h2>
+        <p>
+          SecretShare uses <strong>AES-256-GCM</strong>, a military-grade authenticated encryption
+          algorithm, via the browser's built-in <strong>Web Crypto API</strong>. No third-party
+          cryptography libraries are involved. Your secret is encrypted and decrypted entirely
+          within your browser — the plaintext never touches our servers.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What does "zero-knowledge" mean?</h2>
+        <p>
+          When you create a secret, the encryption key is placed in the URL fragment — the part
+          after the <code>#</code> symbol. Per <strong>RFC 3986</strong>, browsers never send the
+          fragment to servers. This means our servers physically cannot see or log the decryption
+          key. We store only the encrypted blob and have no way to read your secret — ever.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>How does view-once burn work?</h2>
+        <p>
+          Each secret is stored in its own isolated <strong>Durable Object</strong> on Cloudflare's
+          network. Durable Objects provide single-threaded execution, which means only one request
+          can process at a time. When someone retrieves a secret, the encrypted data is atomically
+          deleted before the response is sent. Even if two people click the link at the exact same
+          instant, only one will ever see the secret — the other gets a "burned" message.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>How does password protection work?</h2>
+        <p>
+          Password protection adds a second layer of encryption on top of the URL key. Your password
+          is run through <strong>PBKDF2 with 600,000 iterations</strong> (per OWASP 2024 guidelines)
+          to derive a strong encryption key. The secret is then double-encrypted: first with the
+          URL key, then with the password-derived key. The recipient needs both the link and the
+          password to decrypt. Think of it like two-factor authentication for your secret — share the
+          link in one channel and the password in another.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What expiration options are available?</h2>
+        <p>
+          Secrets can be set to expire after <strong>1 hour</strong>, <strong>24 hours</strong>,
+          or <strong>7 days</strong>. Signed-in users also get a <strong>30-day</strong> option.
+          When a secret expires, the encrypted data is permanently wiped — only minimal metadata
+          is kept briefly for status checks, then that is cleaned up too. Expired secrets cannot
+          be recovered.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What are the best practices for sharing?</h2>
+        <p>
+          For maximum security, send the SecretShare link through an <strong>end-to-end encrypted
+          channel</strong> like Signal, WhatsApp, or encrypted email. If you use password protection,
+          send the password through a <strong>different channel</strong> than the link — for example,
+          send the link via Slack and the password via text message. This way, compromising a single
+          channel is not enough to access the secret.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Is SecretShare scalable and reliable?</h2>
+        <p>
+          SecretShare runs on <strong>Cloudflare's global edge network</strong>, spanning 300+ data
+          centers worldwide. Each secret is an independent Durable Object — there's no shared database
+          that could become a bottleneck or single point of failure. Whether one person or thousands
+          create secrets at the same time, each one is handled independently at the edge location
+          nearest to the user.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>What can SecretShare's servers see?</h2>
+        <p>
+          Our servers store only the <strong>encrypted blob</strong>, a secret ID, and basic metadata
+          (creation time, expiry, and status). We never have access to the encryption key, the
+          plaintext, or any password you set. Even if our servers were completely compromised, an
+          attacker would only find encrypted data that is computationally infeasible to decrypt without
+          the key — which only exists in the URL you shared.
+        </p>
+      </div>
+    </main>
+
+    <footer class="footer">
+      End-to-end encrypted &middot; <a href="/">Back to SecretShare</a>
+    </footer>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/faq.js"></script>
+</body>
+</html>

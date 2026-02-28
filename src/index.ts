@@ -38,6 +38,16 @@ app.get('/s/:id', async (c) => {
   return c.env.ASSETS.fetch(assetRequest);
 });
 
+app.get('/faq', async (c) => {
+  const assetUrl = new URL(c.req.url);
+  assetUrl.pathname = '/faq';
+  const assetRequest = new Request(assetUrl.toString(), {
+    method: 'GET',
+    headers: c.req.raw.headers,
+  });
+  return c.env.ASSETS.fetch(assetRequest);
+});
+
 app.get('/status/:id', async (c) => {
   const assetUrl = new URL(c.req.url);
   assetUrl.pathname = '/status';
