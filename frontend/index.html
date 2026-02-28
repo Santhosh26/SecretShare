@@ -24,7 +24,7 @@
     </header>
 
     <nav class="nav" aria-label="User navigation">
-      <a href="/login" class="nav__link">Sign in</a>
+      <a href="/faq" class="nav__link">FAQ</a>
     </nav>
 
     <main id="main">
@@ -47,7 +47,6 @@
             <option value="3600">1 hour</option>
             <option value="86400" selected>24 hours</option>
             <option value="604800">7 days</option>
-            <option value="2592000" disabled id="ttl-30d">30 days (sign in required)</option>
           </select>
         </div>
 
@@ -60,10 +59,10 @@
             <input
               type="password"
               id="password-input"
-              placeholder="Enter a password"
+              placeholder="Enter a password (min. 8 characters)"
               autocomplete="new-password"
             >
-            <div class="hint">Share this password separately from the link</div>
+            <div class="hint">Minimum 8 characters. Share this password separately from the link.</div>
           </div>
         </div>
 

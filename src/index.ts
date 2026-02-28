@@ -5,8 +5,6 @@ import { securityHeaders } from './middleware/security-headers';
 import { csrfProtection } from './middleware/csrf';
 import health from './routes/health';
 import secrets from './routes/secrets';
-import auth from './routes/auth';
-import dashboard from './routes/dashboard';
 
 export { SecretDurableObject } from './secret-do';
 
@@ -22,8 +20,6 @@ app.use('/api/*', csrfProtection);
 // Mount API routes
 app.route('/', health);
 app.route('/', secrets);
-app.route('/', auth);
-app.route('/', dashboard);
 
 // SPA routes — serve specific HTML pages for dynamic paths
 // The ASSETS binding with wrangler serves files without .html extension

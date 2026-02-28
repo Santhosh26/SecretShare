@@ -92,6 +92,7 @@ export class SecretDurableObject implements DurableObject {
       expiresAt: record.expiresAt,
       viewedAt: record.viewedAt,
       viewerCountry: record.viewerCountry,
+      passwordProtected: record.passwordProtected,
     });
   }
 

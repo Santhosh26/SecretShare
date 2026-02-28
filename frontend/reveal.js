@@ -1,8 +1,6 @@
 // reveal.js — Reveal secret page logic
 
 (async function () {
-  await initPage();
-
   // Parse URL: /s/:id#key
   const pathMatch = window.location.pathname.match(/^\/s\/([A-Za-z0-9_-]{22})$/);
   const keyString = window.location.hash.slice(1); // Remove the '#'
@@ -15,6 +13,7 @@
   const secretId = pathMatch[1];
 
   // DOM refs
+  const statusChecking = document.getElementById('status-checking');
   const preReveal = document.getElementById('pre-reveal');
   const revealBtn = document.getElementById('reveal-btn');
   const revealLoading = document.getElementById('reveal-loading');
@@ -28,7 +27,45 @@
 
   let encryptedData = null; // Cache the blob after atomic burn for password retries
   let attempts = 0;
+  let isPasswordProtected = false;
 
+  // Phase 1: Pre-check status before burning
+  try {
+    const res = await fetch(`/api/secrets/${secretId}/status`);
+    const statusData = await res.json();
+
+    if (statusData.status === 'viewed') {
+      showError('This secret has already been viewed and destroyed.');
+      return;
+    }
+
+    if (statusData.status === 'expired') {
+      showError('This secret has expired.');
+      return;
+    }
+
+    if (statusData.status === 'unknown') {
+      showError('Secret not found. It may have already been viewed or never existed.');
+      return;
+    }
+
+    // Status is 'pending' — show the reveal UI
+    isPasswordProtected = !!statusData.passwordProtected;
+
+    statusChecking.style.display = 'none';
+    preReveal.style.display = '';
+
+    if (isPasswordProtected) {
+      passwordSection.style.display = '';
+      revealBtn.textContent = 'Decrypt';
+      passwordInput.focus();
+    }
+  } catch {
+    showError('Failed to check secret status. Please try again.');
+    return;
+  }
+
+  // Phase 2: Burn and decrypt on button click
   revealBtn.addEventListener('click', handleReveal);
 
   // Enter key on password field
@@ -37,6 +74,16 @@
   });
 
   async function handleReveal() {
+    // If password-protected, require password before burning
+    if (isPasswordProtected) {
+      const password = passwordInput.value;
+      if (!password) {
+        showToast('Please enter the password', true);
+        passwordInput.focus();
+        return;
+      }
+    }
+
     revealBtn.disabled = true;
     revealLoading.classList.add('visible');
 
@@ -49,33 +96,12 @@
           throw new Error(data.error || 'Secret not found or already viewed.');
         }
         encryptedData = await res.json();
-
-        // If password-protected, show password field and wait for input
-        if (encryptedData.passwordProtected) {
-          passwordSection.style.display = '';
-          revealLoading.classList.remove('visible');
-          revealBtn.disabled = false;
-          revealBtn.textContent = 'Decrypt';
-          passwordInput.focus();
-
-          // Only proceed if we already have a password entered
-          if (!passwordInput.value) {
-            return;
-          }
-        }
       }
 
       // Decrypt
       let plaintext;
       if (encryptedData.passwordProtected) {
         const password = passwordInput.value;
-        if (!password) {
-          showToast('Please enter the password', true);
-          revealBtn.disabled = false;
-          revealLoading.classList.remove('visible');
-          passwordInput.focus();
-          return;
-        }
 
         try {
           plaintext = await SecretCrypto.decryptWithPassword(
@@ -122,6 +148,7 @@
   }
 
   function showError(msg) {
+    statusChecking.style.display = 'none';
     preReveal.style.display = 'none';
     errorState.style.display = '';
     errorMessage.textContent = msg;

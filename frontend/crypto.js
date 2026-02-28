@@ -147,14 +147,15 @@ async function encryptWithPassword(plaintext, urlKey, password, secretId) {
   // Layer 1: encrypt with URL key + AAD
   const layer1 = await encrypt(plaintext, urlKey, secretId);
 
-  // Layer 2: encrypt layer1 with password-derived key (no AAD on outer layer — AAD is on inner)
+  // Layer 2: encrypt layer1 with password-derived key + AAD
   const salt = generateSalt();
   const passwordDerivedKey = await deriveKeyFromPassword(password, salt);
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const encoded = new TextEncoder().encode(layer1);
+  const outerAad = new TextEncoder().encode(secretId);
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv, additionalData: outerAad },
     passwordDerivedKey,
     encoded
   );
@@ -167,14 +168,15 @@ async function encryptWithPassword(plaintext, urlKey, password, secretId) {
 }
 
 async function decryptWithPassword(encryptedPayload, urlKeyString, password, saltBase64, secretId) {
-  // Layer 2: decrypt with password-derived key
+  // Layer 2: decrypt with password-derived key + AAD
   const passwordDerivedKey = await deriveKeyFromPassword(password, saltBase64);
   const outerBlob = base64Decode(encryptedPayload);
   const outerIv = outerBlob.slice(0, IV_LENGTH);
   const outerCiphertext = outerBlob.slice(IV_LENGTH);
+  const outerAad = new TextEncoder().encode(secretId);
 
   const layer1Bytes = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: outerIv },
+    { name: 'AES-GCM', iv: outerIv, additionalData: outerAad },
     passwordDerivedKey,
     outerCiphertext
   );

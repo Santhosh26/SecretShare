@@ -1,13 +1,11 @@
 import { Hono } from 'hono';
 import type { Env, SecretRecord, SecretCreateRequest } from '../types';
 import { isValidSecretId } from '../services/id';
-import { optionalAuth } from '../middleware/auth';
 
 const ALLOWED_TTLS: Record<number, number> = {
   3600: 3600,          // 1 hour
   86400: 86400,        // 24 hours
   604800: 604800,      // 7 days
-  2592000: 2592000,    // 30 days (authenticated users only)
 };
 
 const MAX_ENCRYPTED_SIZE = 70 * 1024; // 70KB
@@ -15,7 +13,7 @@ const MAX_ENCRYPTED_SIZE = 70 * 1024; // 70KB
 const secrets = new Hono<{ Bindings: Env }>();
 
 // POST /api/secrets — store an encrypted secret
-secrets.post('/api/secrets', optionalAuth, async (c) => {
+secrets.post('/api/secrets', async (c) => {
   let body: SecretCreateRequest;
   try {
     body = await c.req.json();
@@ -37,8 +35,12 @@ secrets.post('/api/secrets', optionalAuth, async (c) => {
     return c.json({ error: 'Encrypted payload too large' }, 400);
   }
 
-  // Validate salt (if password-protected, salt should be ~24 chars base64)
-  if (body.salt && (typeof body.salt !== 'string' || body.salt.length > 100)) {
+  // Validate salt format (base64-encoded 16 random bytes = exactly 24 chars)
+  if (body.passwordProtected && body.salt) {
+    if (typeof body.salt !== 'string' || !/^[A-Za-z0-9+/]{22}==$/.test(body.salt)) {
+      return c.json({ error: 'Invalid salt format' }, 400);
+    }
+  } else if (body.salt && (typeof body.salt !== 'string' || body.salt.length > 100)) {
     return c.json({ error: 'Invalid salt' }, 400);
   }
 
@@ -53,11 +55,6 @@ secrets.post('/api/secrets', optionalAuth, async (c) => {
     return c.json({ error: 'Invalid TTL value' }, 400);
   }
 
-  // 30-day TTL requires authentication
-  if (body.ttl === 2592000 && !c.get('user')) {
-    return c.json({ error: 'Sign in to use 30-day expiry' }, 403);
-  }
-
   // Build the secret record
   const now = new Date();
   const record: SecretRecord = {
@@ -68,7 +65,6 @@ secrets.post('/api/secrets', optionalAuth, async (c) => {
     expiresAt: new Date(now.getTime() + ttlSeconds * 1000).toISOString(),
     viewedAt: null,
     status: 'pending',
-    creatorUserId: c.get('user')?.id,
   };
 
   // Store in Durable Object
@@ -86,25 +82,6 @@ secrets.post('/api/secrets', optionalAuth, async (c) => {
 
   if (!doResponse.ok) {
     return c.json({ error: 'Failed to store secret' }, 500);
-  }
-
-  // If authenticated, add to user's dashboard metadata
-  const user = c.get('user');
-  if (user) {
-    const meta = {
-      id: body.id,
-      status: 'pending' as const,
-      createdAt: record.createdAt,
-      expiresAt: record.expiresAt,
-      passwordProtected: record.passwordProtected,
-    };
-    user.secrets.unshift(meta);
-    // Cap at 100 entries
-    if (user.secrets.length > 100) {
-      user.secrets = user.secrets.slice(0, 100);
-    }
-    // Write back to canonical key
-    await c.env.USERS.put(`google:${user.googleId}`, JSON.stringify(user));
   }
 
   return c.json({ id: body.id }, 201);

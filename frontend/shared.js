@@ -1,51 +1,6 @@
-// shared.js — Auth state, API helpers, copy-to-clipboard, toast notifications
+// shared.js — API helpers, copy-to-clipboard, toast notifications, utilities
 
 const API_BASE = '';  // Same origin
-
-// --- Auth State ---
-
-async function checkAuth() {
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      return data.user || null;
-    }
-  } catch {
-    // Not logged in or auth endpoint not ready
-  }
-  return null;
-}
-
-function renderNav(user) {
-  const nav = document.querySelector('.nav');
-  if (!nav) return;
-
-  if (user) {
-    nav.innerHTML = `
-      <span class="nav__user">${escapeHtml(user.name)}</span>
-      <a href="/dashboard" class="nav__link">Dashboard</a>
-      <a href="/faq" class="nav__link">FAQ</a>
-      <a href="#" class="nav__link" id="logout-link">Sign out</a>
-    `;
-    const logoutLink = document.getElementById('logout-link');
-    if (logoutLink) {
-      logoutLink.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await fetch(`${API_BASE}/api/auth/logout`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        window.location.reload();
-      });
-    }
-  } else {
-    nav.innerHTML = `
-      <a href="/faq" class="nav__link">FAQ</a>
-      <a href="/login" class="nav__link">Sign in</a>
-    `;
-  }
-}
 
 // --- API Helpers ---
 
@@ -161,12 +116,4 @@ function generateClientId() {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return SecretCrypto.base64urlEncode(bytes);
-}
-
-// --- Init Nav on Load ---
-
-async function initPage() {
-  const user = await checkAuth();
-  renderNav(user);
-  return user;
 }

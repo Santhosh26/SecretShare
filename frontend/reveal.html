@@ -24,17 +24,25 @@
     </header>
 
     <nav class="nav" aria-label="User navigation">
-      <a href="/login" class="nav__link">Sign in</a>
+      <a href="/faq" class="nav__link">FAQ</a>
     </nav>
 
     <main id="main">
+      <!-- Loading state (checking status) -->
+      <div id="status-checking" class="card">
+        <div class="loading visible">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Checking secret...</span>
+        </div>
+      </div>
+
       <!-- Pre-reveal state -->
-      <div id="pre-reveal" class="card">
+      <div id="pre-reveal" class="card" style="display:none">
         <div class="message message--info">
           This secret can only be viewed once. After you reveal it, the encrypted data is permanently destroyed.
         </div>
 
-        <!-- Password input (hidden by default) -->
+        <!-- Password input (hidden by default, shown if passwordProtected) -->
         <div id="password-section" class="form-group" style="display:none; margin-top:20px;">
           <label for="reveal-password">This secret is password-protected</label>
           <input type="password" id="reveal-password" placeholder="Enter the password" autocomplete="off">

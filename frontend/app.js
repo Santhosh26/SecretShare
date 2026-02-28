@@ -1,15 +1,6 @@
 // app.js — Create secret page logic
 
 (async function () {
-  const user = await initPage();
-
-  // Enable 30-day TTL for logged-in users
-  const ttl30d = document.getElementById('ttl-30d');
-  if (user && ttl30d) {
-    ttl30d.disabled = false;
-    ttl30d.textContent = '30 days';
-  }
-
   // DOM refs
   const secretInput = document.getElementById('secret-input');
   const sizeCounter = document.getElementById('size-counter');
@@ -67,6 +58,11 @@
     const password = passwordToggle.checked ? passwordInput.value : '';
     if (passwordToggle.checked && !password) {
       showToast('Please enter a password', true);
+      passwordInput.focus();
+      return;
+    }
+    if (passwordToggle.checked && password.length < 8) {
+      showToast('Password must be at least 8 characters', true);
       passwordInput.focus();
       return;
     }

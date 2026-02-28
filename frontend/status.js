@@ -1,8 +1,6 @@
 // status.js — Status page logic
 
 (async function () {
-  await initPage();
-
   const pathMatch = window.location.pathname.match(/^\/status\/([A-Za-z0-9_-]{22})$/);
   if (!pathMatch) {
     showStatus('unknown');
